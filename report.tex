@@ -60,4 +60,6 @@ $$1000 * ((min\_path2 + 1) / (min\_path1 + 1)) + (num\_path1 + 1) / (num\_path2 
 
 donde $min\_path$ y $num\_path$ representan la longitud del camino de longitud mínima y la cantidad de caminos de longitud mínima que hay en el tablero para cada jugador, respectivamente. Estos valores se utilizan sobre todo en proporción para medir cuán mejor es un valor sobre otro en el tablero y se multiplican por una constante para darle signficancia.
 
+Para calcular cada uno de los valores que dependen del grafo generado, se utilizó 0-1 BFS (multisource) que funciona más rápido que el algoritmo de Dijkstra, para contar la cantitdad de caminos de longitud mínima se utilizó Programación Dinámica.
+
 \end{document}
