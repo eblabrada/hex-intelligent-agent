@@ -55,9 +55,11 @@ class PopPlayer(Player):
     self.player_id = player_id
     self.directions = [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, 1), (1, -1)]
     self.INF = 10**18
+    self.memoH = {}
+    self.memoAB = {}
     
   def play(self, board: HexBoard, time_limit = 10.0) -> tuple:
-    time_limit -= 2.0
+    time_limit = max(time_limit - 2.0, 1.0)
     start_time = time.time()
     N = board.size ** 2 # number of vertex of board graph
     
@@ -170,12 +172,24 @@ class PopPlayer(Player):
       return 1000 * ((min_path2 + 1) / (min_path1 + 1)) + (num_path1 + 1) / (num_path2 + 1) * 18
     
     def alphaBeta(cur_board: HexBoard, alpha: int, beta: int, cur_player: int, depth: int):
+      hash_board = 0
+      for i in range(N):
+        x, y = decode(i)
+        hash_board = hash_board * 31 + cur_board.board[x][y]
+
       if time.time() - start_time > time_limit:
-        return heuristic_value(cur_board)
+        if hash_board not in self.memoH:
+          self.memoH[hash_board] = heuristic_value(cur_board)
+        return self.memoH[hash_board]
 
       if depth == 0 or winner(cur_board, cur_player) or winner(cur_board, 3 - cur_player):
-        return heuristic_value(cur_board)
-      
+        if hash_board not in self.memoH:
+          self.memoH[hash_board] = heuristic_value(cur_board)
+        return self.memoH[hash_board]
+
+      if (hash_board, alpha, beta, cur_player, depth) in self.memoAB:
+        return self.memoAB[(hash_board, alpha, beta, cur_player, depth)]
+
       if cur_player == 1: # max
         opt, cnt = -100000, 0
         movesX = [i for i in range(cur_board.size)]
@@ -198,6 +212,7 @@ class PopPlayer(Player):
             opt, alpha = max(opt, go), max(alpha, go)
             cur_board.board[x][y] = 0
           if alpha >= beta: break
+        self.memoAB[(hash_board, alpha, beta, cur_player, depth)] = opt
         return opt
       else: # min
         opt, cnt = 100000, 0
@@ -220,6 +235,7 @@ class PopPlayer(Player):
             opt, beta = min(opt, go), min(beta, go)
             cur_board.board[x][y] = 0
           if alpha >= beta: break
+        self.memoAB[(hash_board, alpha, beta, cur_player, depth)] = opt
         return opt
 
     def optimal_move():
