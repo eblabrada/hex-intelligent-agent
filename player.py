@@ -151,8 +151,8 @@ class PopPlayer(Player):
       best1 = [bfs_multisource_player1(cur_board, 0), bfs_multisource_player1(cur_board, cur_board.size - 1)]
       best2 = [bfs_multisource_player2(cur_board, 0), bfs_multisource_player2(cur_board, cur_board.size - 1)]
 
-      min_path1, res1 = self.INF, 0
-      min_path2, res2 = self.INF, 0
+      min_path1, num_path1 = self.INF, 0
+      min_path2, num_path2 = self.INF, 0
       for x in range(cur_board.size):
         for y in range(cur_board.size):
           if min_path1 > best1[0][0][encode(x, y)] + best1[1][0][encode(x, y)]:
