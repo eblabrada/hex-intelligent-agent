@@ -1,6 +1,7 @@
 import time
 from collections import deque
 from board import HexBoard
+import random
 
 class Player:
   def __init__(self, player_id: int):
@@ -49,13 +50,14 @@ class DSU:
       return True
     return False
 
-class IAPlayer(Player):
+class PopPlayer(Player):
   def __init__(self, player_id: int):
     self.player_id = player_id
     self.directions = [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, 1), (1, -1)]
     self.INF = 10**18
     
-  def play(self, board: HexBoard, time_limit = 7.0) -> tuple:
+  def play(self, board: HexBoard, time_limit = 10.0) -> tuple:
+    time_limit -= 2.0
     start_time = time.time()
     N = board.size ** 2 # number of vertex of board graph
     
@@ -155,17 +157,17 @@ class IAPlayer(Player):
         for y in range(cur_board.size):
           if min_path1 > best1[0][0][encode(x, y)] + best1[1][0][encode(x, y)]:
             min_path1 = best1[0][0][encode(x, y)] + best1[1][0][encode(x, y)]
-            res1 = best1[0][1][encode(x, y)] * best1[1][1][encode(x, y)]
+            num_path1 = best1[0][1][encode(x, y)] * best1[1][1][encode(x, y)]
           elif min_path1 == best1[0][0][encode(x, y)] + best1[1][0][encode(x, y)]:
-            res1 += best1[0][1][encode(x, y)] * best1[1][1][encode(x, y)]
+            num_path1 += best1[0][1][encode(x, y)] * best1[1][1][encode(x, y)]
 
           if min_path2 > best2[0][0][encode(x, y)] + best2[1][0][encode(x, y)]:
             min_path2 = best2[0][0][encode(x, y)] + best2[1][0][encode(x, y)]
-            res2 = best2[0][1][encode(x, y)] * best2[1][1][encode(x, y)]
+            num_path2 = best2[0][1][encode(x, y)] * best2[1][1][encode(x, y)]
           elif min_path2 == best2[0][0][encode(x, y)] + best2[1][0][encode(x, y)]:
-            res2 += best2[0][1][encode(x, y)] * best2[1][1][encode(x, y)]
+            num_path2 += best2[0][1][encode(x, y)] * best2[1][1][encode(x, y)]
 
-      return 1000 * ((min_path2 + 1) / (min_path1 + 1)) + (res1 + 1) / (res2 + 1) * 18
+      return 1000 * ((min_path2 + 1) / (min_path1 + 1)) + (num_path1 + 1) / (num_path2 + 1) * 18
     
     def alphaBeta(cur_board: HexBoard, alpha: int, beta: int, cur_player: int, depth: int):
       if time.time() - start_time > time_limit:
@@ -176,8 +178,18 @@ class IAPlayer(Player):
       
       if cur_player == 1: # max
         opt, cnt = -100000, 0
-        for x in range(cur_board.size):
+        movesX = [i for i in range(cur_board.size)]
+        for x in movesX:
+          movesY = []
+
           for y in range(cur_board.size):
+            if cur_board.board[x][y] != 0:
+              continue
+            movesY.append(y)
+
+          random.shuffle(movesY)
+
+          for y in movesY:
             if cur_board.board[x][y] != 0:
               continue
             cnt += 1
@@ -189,11 +201,19 @@ class IAPlayer(Player):
         return opt
       else: # min
         opt, cnt = 100000, 0
-        for x in range(cur_board.size):
+        movesX = [i for i in range(cur_board.size)]
+        random.shuffle(movesX)
+        for x in movesX:
+          movesY = []
+
           for y in range(cur_board.size):
             if cur_board.board[x][y] != 0:
               continue
-            
+            movesY.append(y)
+
+          random.shuffle(movesY)
+
+          for y in movesY:
             cnt += 1
             cur_board.board[x][y] = cur_player
             go = alphaBeta(cur_board, alpha, beta, 3 - cur_player, depth - 1)
@@ -205,38 +225,54 @@ class IAPlayer(Player):
     def optimal_move():
       cur_board = board.clone() 
       best, res, sp = -self.INF, self.INF, self.INF
+      moves = []
       for x in range(cur_board.size):
         for y in range(cur_board.size):
           if cur_board.board[x][y] != 0: continue 
-          cur_board.board[x][y] = self.player_id
-          goab = alphaBeta(cur_board, -self.INF, self.INF, 3 - self.player_id, 2)
+          moves.append((x, y))
 
-          if self.player_id == 2:
-            goab = 1000000 - goab
+      random.shuffle(moves)
 
-          cur_sp = self.INF
-          if self.player_id == 1:
-            dis = bfs_multisource_player1(cur_board, 0)
-            for i in range(cur_board.size):
-              e = encode(i, cur_board.size - 1)
-              cur_sp = min(cur_sp, dis[0][e])
-          else:
-            dis = bfs_multisource_player2(cur_board, 0)
-            for i in range(cur_board.size):
-              e = encode(cur_board.size - 1, i)
-              cur_sp = min(cur_sp, dis[0][e])
+      for x, y in moves:
+        cur_board.board[x][y] = self.player_id
+        goab = alphaBeta(cur_board, -self.INF, self.INF, 3 - self.player_id, 2)
 
-          # print(goab + (N - cur_sp) * 7, cur_sp, x, y)
-          if best < goab + (N - cur_sp) * 7:
-            best, res, sp = goab + (N - cur_sp) * 7, (x, y), cur_sp
-          elif best == goab + (N - cur_sp) * 7:
-            if cur_sp > sp:
-              sp = cur_sp
-              res = (x, y)
-          cur_board.board[x][y] = 0
+        if self.player_id == 2:
+          goab = 1000000 - goab
+
+        cur_sp = self.INF; opp_sp = self.INF
+        if self.player_id == 1:
+          dis = bfs_multisource_player1(cur_board, 0)
+          for i in range(cur_board.size):
+            e = encode(i, cur_board.size - 1)
+            cur_sp = min(cur_sp, dis[0][e])
+
+          dis2 = bfs_multisource_player2(cur_board, 0)
+          for i in range(cur_board.size):
+            e = encode(cur_board.size - 1, i)
+            opp_sp = min(opp_sp, dis2[0][e])
+        else:
+          dis = bfs_multisource_player2(cur_board, 0)
+          for i in range(cur_board.size):
+            e = encode(cur_board.size - 1, i)
+            cur_sp = min(cur_sp, dis[0][e])
+        
+          dis1 = bfs_multisource_player1(cur_board, 0)
+          for i in range(cur_board.size):
+            e = encode(i, cur_board.size - 1)
+            opp_sp = min(opp_sp, dis1[0][e])
+          
+        # print(goab + (N - cur_sp) * 7, cur_sp, x, y)
+        if best < goab + (N - cur_sp) * 7 + opp_sp * 5:
+          best, res, sp = goab + (N - cur_sp) * 7 + opp_sp * 5, (x, y), cur_sp
+        elif best == goab + (N - cur_sp) * 7 + opp_sp * 5:
+          if cur_sp > sp:
+            sp = cur_sp
+            res = (x, y)
+        cur_board.board[x][y] = 0
         
       return res
 
     res = optimal_move()
-    print(time.time() - start_time)
+    # print(time.time() - start_time)
     return res 
