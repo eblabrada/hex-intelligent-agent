@@ -1,7 +1,7 @@
 board.py
 game.py
 utils.py
-tester_1.py
+tester_*.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
